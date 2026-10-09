@@ -1,0 +1,129 @@
+﻿# =============================================================================
+# QMV Index — Master Configuration
+# All parameters live here. No magic numbers in source code.
+# =============================================================================
+
+project:
+  name: "QMV Index"
+  version: "0.1.0"
+  random_seed: 42
+  description: >
+    Quantitative Market Value index for Hacker News content.
+    Predicts 72-hour realized attention value from early engagement signals.
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+data:
+  raw_dir: "data/raw"
+  interim_dir: "data/interim"
+  features_dir: "data/features"
+
+  hn_api_base: "https://hn.algolia.com/api/v1"
+  hn_tags: "story"
+  min_age_hours: 72
+  fetch_batch_size: 1000
+  max_pages: 50
+
+  fetch_start_date: "2024-01-01"
+  fetch_end_date:   "2024-12-31"
+
+  # target = log1p(points_72h + 2 * comments_72h)
+  points_weight: 1
+  comments_weight: 2
+
+# ---------------------------------------------------------------------------
+# Feature Engineering
+# ---------------------------------------------------------------------------
+features:
+  prediction_horizons: [1, 3, 6]
+
+  title:
+    max_len: 200
+    stopwords_lang: "english"
+
+  time:
+    tz: "UTC"
+    cyclical_encode: true
+
+  author:
+    karma_log_transform: true
+    min_karma_clip: 0
+
+  domain:
+    top_k: 200
+
+  snapshot_horizons_available: []
+
+# ---------------------------------------------------------------------------
+# Train / Validation / Test Split  (ALWAYS chronological)
+# ---------------------------------------------------------------------------
+split:
+  strategy: "chronological"
+  train_frac: 0.70
+  val_frac:   0.15
+  test_frac:  0.15
+  gap_days: 1
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+models:
+  lgbm:
+    objective: "regression"
+    metric: "rmse"
+    n_estimators: 1000
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 20
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 5
+    reg_alpha: 0.1
+    reg_lambda: 0.1
+    early_stopping_rounds: 50
+    verbose: -1
+    n_jobs: -1
+    random_state: 42
+
+  gam:
+    n_splines: 20
+    lam: 0.6
+
+  ridge:
+    alpha: 1.0
+    max_iter: 5000
+
+# ---------------------------------------------------------------------------
+# Evaluation & Back-testing
+# ---------------------------------------------------------------------------
+evaluation:
+  metrics: ["rmse", "mae", "r2", "spearman_rho"]
+  backtest:
+    window_days: 30
+    min_train_days: 60
+    step_days: 7
+
+# ---------------------------------------------------------------------------
+# QMV Index
+# ---------------------------------------------------------------------------
+qmv_index:
+  percentile_window_days: 30
+  min_window_stories: 100
+  output_scale: [0, 100]
+
+# ---------------------------------------------------------------------------
+# SHAP
+# ---------------------------------------------------------------------------
+shap:
+  n_background_samples: 500
+  top_k_features: 20
+  waterfall_story_ids: []
+
+# ---------------------------------------------------------------------------
+# Reporting
+# ---------------------------------------------------------------------------
+reports:
+  figures_dir: "reports/figures"
+  dpi: 150
+  style: "seaborn-v0_8-darkgrid"

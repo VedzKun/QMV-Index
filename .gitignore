@@ -1,0 +1,62 @@
+﻿# =============================================================================
+# .gitignore — QMV Index
+# =============================================================================
+
+# Data (never commit raw/processed data)
+data/raw/
+data/interim/
+data/features/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / credentials
+.env
+*.pem
+secrets.yaml
+
+# Model artifacts (large; use DVC or cloud storage)
+models/
+*.pkl
+*.joblib
+*.lgb
+
+# Reports (generated; keep source, not outputs)
+reports/figures/*.png
+reports/figures/*.pdf
+
+# SHAP cache
+shap_cache/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
