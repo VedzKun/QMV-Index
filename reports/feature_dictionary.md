@@ -1,81 +1,34 @@
-# Feature Dictionary
+# QMV Index — Feature Dictionary
 
 ## 1. Velocity
-* **vel_w1**: Points per hour in window [0, T/3].
-  * **Why it matters**: Captures immediate initial traction.
-  * **Leakage risk**: Low, uses strictly past snapshots relative to T.
-* **vel_w2**: Points per hour in window [T/3, 2T/3].
-  * **Why it matters**: Captures mid-term sustained interest.
-  * **Leakage risk**: Low, uses strictly past snapshots.
-* **vel_w3**: Points per hour in window [2T/3, T].
-  * **Why it matters**: Captures latest momentum before prediction.
-  * **Leakage risk**: Low, uses strictly past snapshots.
-* **accel**: Difference between latest and earliest velocity (`vel_w3 - vel_w1`).
-  * **Why it matters**: Identifies stories that are picking up speed vs dying out.
-  * **Leakage risk**: Low, uses strictly past snapshots.
-* **late_early_ratio**: Ratio of `vel_w3` to `vel_w1`.
-  * **Why it matters**: Relative momentum indicator.
-  * **Leakage risk**: Low.
+* **v1, v2, v3**: Score accumulation rate (points per hour) in intervals [0, T/3], [T/3, 2T/3], [2T/3, T]. Captures momentum.
+* **acceleration**: `v3 - v1`. Detects stories that are picking up steam vs dying out.
+* **late_early_vel_ratio**: `v3 / (v1 + epsilon)`. Similar to acceleration but multiplicative.
 
 ## 2. Engagement Mix
-* **c2p_ratio**: Ratio of comments to points at time T.
-  * **Why it matters**: High ratio indicates controversial or highly conversational topics.
-  * **Leakage risk**: Low.
-* **comment_vel**: Comments per hour up to time T.
-  * **Why it matters**: Identifies fast-moving discussions.
-  * **Leakage risk**: Low.
-* **comment_score_lag**: Time (in hours) to the first comment.
-  * **Why it matters**: Shorter lag indicates immediately engaging content.
-  * **Leakage risk**: Low.
+* **comments_points_ratio**: Controversial or highly technical posts have higher comment ratios.
+* **comment_velocity**: Total comments / T.
+* **comment_lag**: `points_at_T - comments_at_T`. 
 
 ## 3. Recency and Timing
-* **hour_sin** / **hour_cos**: Cyclical encoding of the hour of the day.
-  * **Why it matters**: Traffic varies predictably by time of day.
-  * **Leakage risk**: None.
-* **dow_sin** / **dow_cos**: Cyclical encoding of the day of the week.
-  * **Why it matters**: Weekend traffic behaves differently from weekday traffic.
-  * **Leakage risk**: None.
-* **is_weekend**: Boolean flag for Saturday/Sunday.
-  * **Why it matters**: Clear distinct traffic pattern for weekends.
-  * **Leakage risk**: None.
+* **hour, dow**: Raw UTC hour and Day of Week.
+* **is_weekend**: Boolean penalty for weekends.
+* **hour_sin, hour_cos, dow_sin, dow_cos**: Cyclical encodings to ensure 23:00 and 00:00 are close to each other in vector space.
 
 ## 4. Content
-* **title_len**: Length of the title in characters.
-  * **Why it matters**: Title brevity or descriptiveness can impact CTR.
-  * **Leakage risk**: None.
-* **has_number**: Presence of numbers in the title.
-  * **Why it matters**: Listicles and data-driven posts often perform well.
-  * **Leakage risk**: None.
-* **has_question**: Presence of a question mark in the title.
-  * **Why it matters**: Engages reader curiosity.
-  * **Leakage risk**: None.
-* **is_show_hn**: Flag for "Show HN" posts.
-  * **Why it matters**: Show HN has a dedicated audience and voting behavior.
-  * **Leakage risk**: None.
-* **is_ask_hn**: Flag for "Ask HN" posts.
-  * **Why it matters**: Ask HN often drives higher comment-to-point ratios.
-  * **Leakage risk**: None.
-* **title_svd_[0-19]**: First 20 SVD components of the title TF-IDF matrix.
-  * **Why it matters**: Captures latent semantic topics in titles.
-  * **Leakage risk**: Moderate (fit over all stories could leak future terminology, strictly should be fit on train only).
+* **title_len**: Longer titles sometimes indicate deeper content.
+* **has_question**: "Ask HN" or curious titles.
+* **has_number**: Listicles or year references.
+* **is_ask_hn, is_show_hn**: Explicit tags.
+* **domain**: Target extracted from the URL.
+* **title_svd_0...19**: TF-IDF vectors reduced via TruncatedSVD to capture semantic topics without exploding dimensionality.
 
-## 5. Author Quality
-* **author_quality**: Historical median final outcome over the author's PRIOR stories.
-  * **Why it matters**: Captures an author's historical success rate (reputation).
-  * **Leakage risk**: High if not computed correctly. Handled via expanding window strictly shifted to exclude the current story.
-* **author_post_count**: Number of previous posts by the author.
-  * **Why it matters**: Indicates author experience and community familiarity.
-  * **Leakage risk**: Low, uses strictly prior counts.
-
-## 6. Domain Reputation
-* **domain_rep**: Expanding-window median outcome per domain for prior stories.
-  * **Why it matters**: Certain domains (e.g., github.com, nytimes.com) have high inherent trust or interest.
-  * **Leakage risk**: High if not computed correctly. Handled via expanding window strictly shifted to exclude the current story.
+## 5 & 6. Historical Reputation
+* **author_hist_median**: The median 72h realized value of all *prior* stories by this author. 
+  * *Leakage Prevention*: Uses an expanding window strictly on chronologically sorted stories and shifts the target row by 1 so the current story's outcome is **never** included.
+* **author_post_count**: Number of prior posts by this author.
+* **domain_hist_median**: Expanding median for the domain (e.g. `github.com` vs `nytimes.com`). Also strictly shifted to avoid leakage.
 
 ## 7. Market Context
-* **competing_stories_same_hour**: Number of other stories posted in the same hour.
-  * **Why it matters**: High competition can bury a good story.
-  * **Leakage risk**: Low (uses creation times, which are known).
-* **top30_avg_vel**: Average velocity of the top 30 stories on the site at prediction time.
-  * **Why it matters**: Captures macro site traffic/activity levels.
-  * **Leakage risk**: Moderate. Must be strictly computed using snapshots available at or before T hours after the current story's creation.
+* **competing_stories_hr**: Count of other stories posted in the exact same hour. High supply = lower average visibility.
+* **market_top30_vel**: Average velocity (`v3`) of the 30 stories immediately preceding this one. Proxy for current front-page velocity requirements.

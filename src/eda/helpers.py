@@ -100,7 +100,12 @@ def load_or_simulate_data(db_path: str = str(DB_DEFAULT)) -> tuple[pd.DataFrame,
         
     conn = sqlite3.connect(db_path)
     try:
-        count = conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+        except Exception:
+            logger.info("Tables missing, simulating data...")
+            return _simulate_data()
+            
         if count < 1000:
             logger.info("Insufficient DB data, simulating data...")
             return _simulate_data()
