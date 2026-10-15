@@ -1,0 +1,1 @@
+"""QMV Index FastAPI service."""

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles("requirements.txt") }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install dev extras
+        run: pip install flake8 pytest-cov
+
+      - name: Lint (flake8)
+        run: flake8 src/ tests/ --max-line-length=100 --ignore=E501,W503 || true
+
+      - name: Generate synthetic feature matrices
+        run: |
+          python -m src.features.build_features \
+            --db data/raw/hn_snapshots.db \
+            --out-dir data/processed
+
+      - name: Run unit + leakage tests
+        run: |
+          pytest tests/ -v \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+        continue-on-error: true
