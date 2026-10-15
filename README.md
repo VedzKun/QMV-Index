@@ -10,7 +10,7 @@
 
 The **QMV Index** is a transparent, interpretable model that assigns a **0-100 score** to a piece of content based on its **early engagement signals** (observed at T = 1, 3, or 6 hours after posting). The score represents the story's predicted percentile of realized attention (points + comments) at 72 hours, relative to the trailing 30-day baseline.
 
-Built as a portfolio project for a data scientist role at **ZZAZZ** — a company that prices and trades content using real-time AI valuations.
+Built as a portfolio project.
 
 ---
 
